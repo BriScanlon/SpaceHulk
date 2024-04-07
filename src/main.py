@@ -36,43 +36,48 @@ def place_tile(board, start_x, start_y, length, width, orientation):
     """
     Places a tile on the board at the specified location.
     """
-    for i in range(start_y, start_y + width):
-        for j in range(start_x, start_x + length):
+    # Ensure the placement is within the board's boundaries
+    for i in range(max(0, start_y), min(BOARD_SIZE, start_y + width)):
+        for j in range(max(0, start_x), min(BOARD_SIZE, start_x + length)):
             board[i][j] = 1  # Mark the tile's area as filled
-
+            
 def check_and_place_corridor(board, start_x, start_y, orientation):
-    """
-    Determines the placement for a corridor, considering straight, left, or right orientations
-    from the current point. It chooses a valid orientation randomly if multiple are available.
-    """
     corridor_length = 4
     potential_starts = []
 
+    # Strategy: Each entry in potential_starts includes the new orientation 
+    # and the x, y coordinates where the corridor should start.
+
     # Check straight continuation
-    if can_place_tile(board, start_x + 1, start_y, corridor_length, 1, "horizontal"):
-        potential_starts.append(("straight", start_x + 1, start_y, "horizontal"))
-    if can_place_tile(board, start_x, start_y + 1, 1, corridor_length, "vertical"):
-        potential_starts.append(("straight", start_x, start_y + 1, "vertical"))
+    if orientation == "horizontal" and can_place_tile(board, start_x + 1, start_y, corridor_length, 1, orientation):
+        potential_starts.append((start_x + 1, start_y, "horizontal"))
+    elif orientation == "vertical" and can_place_tile(board, start_x, start_y + 1, 1, corridor_length, orientation):
+        potential_starts.append((start_x, start_y + 1, "vertical"))
 
-    # Check right turn
+    # Check right turn - Considering the board's orientation, "right" depends on the current orientation
     if orientation == "horizontal" and can_place_tile(board, start_x, start_y + 1, 1, corridor_length, "vertical"):
-        potential_starts.append(("right", start_x, start_y + 1, "vertical"))
+        potential_starts.append((start_x, start_y + 1, "vertical"))
     elif orientation == "vertical" and can_place_tile(board, start_x + 1, start_y, corridor_length, 1, "horizontal"):
-        potential_starts.append(("right", start_x + 1, start_y, "horizontal"))
+        potential_starts.append((start_x + 1, start_y, "horizontal"))
 
-    # Check left turn
-    if orientation == "horizontal" and can_place_tile(board, start_x, start_y - corridor_length + 1, 1, corridor_length, "vertical"):
-        potential_starts.append(("left", start_x, start_y - corridor_length + 1, "vertical"))
-    elif orientation == "vertical" and can_place_tile(board, start_x - corridor_length + 1, start_y, corridor_length, 1, "horizontal"):
-        potential_starts.append(("left", start_x - corridor_length + 1, start_y, "horizontal"))
+    # Check left turn - This requires adjusting the start position based on the corridor length
+    if orientation == "horizontal" and can_place_tile(board, start_x, start_y - corridor_length, 1, corridor_length, "vertical"):
+        potential_starts.append((start_x, start_y - corridor_length + 1, "vertical"))
+    elif orientation == "vertical" and can_place_tile(board, start_x - corridor_length, start_y, corridor_length, 1, "horizontal"):
+        potential_starts.append((start_x - corridor_length + 1, start_y, "horizontal"))
 
-    # Randomly choose a valid orientation if available
+    # Choose a potential start position randomly if available
     if potential_starts:
-        direction, new_x, new_y, new_orientation = random.choice(potential_starts)[1:]
-        place_tile(board, new_x, new_y, corridor_length if new_orientation == "horizontal" else 1, 1 if new_orientation == "horizontal" else corridor_length, new_orientation)
-        return new_orientation, new_x, new_y
+        new_x, new_y, new_orientation = random.choice(potential_starts)
+        # Place the corridor based on the chosen orientation
+        place_tile(board, new_x, new_y, corridor_length if new_orientation == "horizontal" else 1, 
+                   corridor_length if new_orientation == "vertical" else 1, new_orientation)
+        return (new_orientation, 
+                new_x + (corridor_length if new_orientation == "horizontal" else 0), 
+                new_y + (corridor_length if new_orientation == "vertical" else 0))
 
-    return orientation, start_x, start_y  # Return original values if no placement is possible
+    # If no valid placement found, return the original orientation and positions
+    return orientation, start_x, start_y
 
 def generate_board():
     """
